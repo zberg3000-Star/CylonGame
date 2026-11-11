@@ -64,6 +64,8 @@ restart={
 2d_physics/layer_1="ship"
 2d_physics/layer_2="bullets"
 2d_physics/layer_3="asteroids"
+2d_physics/layer_4="raider"
+2d_physics/layer_5="raider_shots"
 
 [rendering]
 

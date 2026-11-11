@@ -3,7 +3,11 @@ extends Node2D
 const SHIP_SCENE := preload("res://scenes/ship.tscn")
 const BULLET_SCENE := preload("res://scenes/bullet.tscn")
 const ASTEROID_SCENE := preload("res://scenes/asteroid.tscn")
+const RAIDER_SCENE := preload("res://scenes/raider.tscn")
 const POINTS_BY_TIER: Array[int] = [0, 20, 50, 100]
+const RAIDER_POINTS := 200
+const RAIDER_ROLL_SECONDS := 10.0
+const RAIDER_SPAWN_CHANCE := 0.5
 
 var score := 0
 var lives := 3
@@ -13,6 +17,7 @@ var clearing_wave := false
 var asteroids_alive := 0
 var ship: Ship
 var stars := PackedVector2Array()
+var raider_roll := 0.0
 
 @onready var score_label: Label = $UI/ScoreLabel
 @onready var lives_label: Label = $UI/LivesLabel
@@ -27,9 +32,17 @@ func _ready() -> void:
 	_refresh_hud()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if game_over and Input.is_action_just_pressed("restart"):
 		get_tree().reload_current_scene()
+		return
+	if game_over:
+		return
+	raider_roll += delta
+	if raider_roll >= RAIDER_ROLL_SECONDS:
+		raider_roll -= RAIDER_ROLL_SECONDS
+		if randf() < RAIDER_SPAWN_CHANCE:
+			_spawn_raider()
 
 
 func _spawn_ship() -> void:
@@ -60,6 +73,27 @@ func _on_ship_died() -> void:
 		message_label.visible = true
 		return
 	ship.respawn(get_viewport_rect().size * 0.5)
+
+
+func _spawn_raider() -> void:
+	var raider := RAIDER_SCENE.instantiate() as Raider
+	raider.position = _edge_position(56.0)
+	raider.fired.connect(_on_raider_fired)
+	raider.destroyed.connect(_on_raider_destroyed)
+	add_child(raider)
+
+
+func _on_raider_fired(origin: Vector2, direction: Vector2) -> void:
+	if game_over:
+		return
+	var bullet := BULLET_SCENE.instantiate() as Bullet
+	add_child(bullet)
+	bullet.setup(origin, direction, true)
+
+
+func _on_raider_destroyed() -> void:
+	score += RAIDER_POINTS
+	_refresh_hud()
 
 
 func _spawn_wave() -> void:
@@ -107,17 +141,17 @@ func _begin_next_wave() -> void:
 	_spawn_wave()
 
 
-func _edge_position() -> Vector2:
+func _edge_position(margin: float = 24.0) -> Vector2:
 	var size := get_viewport_rect().size
 	match randi() % 4:
 		0:
-			return Vector2(randf_range(0.0, size.x), -24.0)
+			return Vector2(randf_range(0.0, size.x), -margin)
 		1:
-			return Vector2(randf_range(0.0, size.x), size.y + 24.0)
+			return Vector2(randf_range(0.0, size.x), size.y + margin)
 		2:
-			return Vector2(-24.0, randf_range(0.0, size.y))
+			return Vector2(-margin, randf_range(0.0, size.y))
 		_:
-			return Vector2(size.x + 24.0, randf_range(0.0, size.y))
+			return Vector2(size.x + margin, randf_range(0.0, size.y))
 
 
 func _refresh_hud() -> void:

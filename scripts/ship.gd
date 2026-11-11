@@ -29,7 +29,7 @@ func _physics_process(delta: float) -> void:
 	var was_invulnerable := invulnerable > 0.0
 	invulnerable = maxf(invulnerable - delta, 0.0)
 	if was_invulnerable and invulnerable <= 0.0:
-		_hit_if_touching_asteroid()
+		_hit_if_touching_hazard()
 
 	# get_axis returns -1 when only the first action is held, +1 for the second.
 	# A is turn_left, so holding A makes this value negative and the ship turns
@@ -64,15 +64,23 @@ func _ready() -> void:
 
 
 func _on_area_entered(area: Area2D) -> void:
-	if area is Asteroid:
+	if area.is_in_group("raider_shots"):
+		area.queue_free()
+	if _is_hazard(area):
 		_take_hit()
 
 
-func _hit_if_touching_asteroid() -> void:
+func _hit_if_touching_hazard() -> void:
 	for area in get_overlapping_areas():
-		if area is Asteroid:
+		if _is_hazard(area):
+			if area.is_in_group("raider_shots"):
+				area.queue_free()
 			_take_hit()
 			return
+
+
+func _is_hazard(area: Area2D) -> bool:
+	return area is Asteroid or area.is_in_group("raider_shots")
 
 
 func _take_hit() -> void:
